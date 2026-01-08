@@ -1,5 +1,10 @@
 // NVIDIA API Configuration
-const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || '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';
+// SECURITY: API key must be set as environment variable
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
+
+if (!NVIDIA_API_KEY) {
+  console.error('❌ SECURITY ERROR: NVIDIA_API_KEY environment variable is not set');
+}
 
 // Common misspellings dictionary
 export const commonTypos = {
@@ -38,6 +43,12 @@ export const commonTypos = {
 
 // AI-powered spell check using NVIDIA API
 export async function checkSpellingWithAI(text) {
+  // Security check
+  if (!NVIDIA_API_KEY) {
+    console.error('❌ Cannot use AI: NVIDIA_API_KEY not configured');
+    return null;
+  }
+
   try {
     console.log('🤖 Using NVIDIA AI for spell checking...');
 

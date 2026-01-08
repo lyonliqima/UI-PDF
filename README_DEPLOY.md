@@ -11,13 +11,29 @@
 
 ### 🔧 环境变量配置
 
-在Vercel项目中设置环境变量：
+⚠️ **重要安全提醒**：
+- **切勿**将API密钥提交到Git仓库
+- **切勿**在代码中硬编码API密钥
+- 仅在Vercel环境变量中配置
 
-进入 Vercel Dashboard → Settings → Environment Variables，添加：
+#### 步骤1：获取NVIDIA API密钥
+
+1. 访问 [NVIDIA Build Portal](https://build.nvidia.com/)
+2. 注册/登录账号
+3. 生成新的API密钥
+
+#### 步骤2：在Vercel中配置环境变量
+
+进入 **Vercel Dashboard → Settings → Environment Variables**，添加：
 
 ```
-NVIDIA_API_KEY = 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
+Key: NVIDIA_API_KEY
+Value: 你的_NVIDIA_API_密钥（从步骤1获取）
 ```
+
+**注意**：
+- 选择环境：All (Production, Preview, Development)
+- 不要勾选 "Expose to Browser"（前端不需要访问此密钥）
 
 ### 📦 部署步骤
 
