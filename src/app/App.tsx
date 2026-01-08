@@ -80,9 +80,8 @@ function ThumbnailSidebar({ file, numPages, selectedId, onSelect }: { file: File
                   }
                 }
               }}
-              className={`relative w-[164px] h-[220px] rounded-lg cursor-pointer transition-all border overflow-hidden shrink-0 bg-white mb-3 ${
-                isSelected ? "border-2 border-primary" : "border-border hover:border-gray-300"
-              }`}
+              className={`relative w-[164px] h-[220px] rounded-lg cursor-pointer transition-all border overflow-hidden shrink-0 bg-white mb-3 ${isSelected ? "border-2 border-primary" : "border-border hover:border-gray-300"
+                }`}
             >
               <div className="w-full h-full overflow-hidden flex items-start justify-center pointer-events-none">
                 <Page
@@ -144,9 +143,8 @@ function RightSidebar({
               <div
                 key={index}
                 onClick={() => onTypoClick(index)}
-                className={`p-4 rounded-lg border cursor-pointer transition-all hover:bg-accent ${
-                  selectedTypo === index ? 'border-primary bg-accent' : 'border-border'
-                }`}
+                className={`p-4 rounded-lg border cursor-pointer transition-all hover:bg-white ${selectedTypo === index ? 'border-primary bg-white' : 'border-border bg-white'
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
@@ -163,6 +161,65 @@ function RightSidebar({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+
+function PageWithTypoOverlay({
+  pageNum,
+  width,
+  typos,
+  activeTypo
+}: {
+  pageNum: number,
+  width: number,
+  typos: TypoDetection[],
+  activeTypo: TypoDetection | null
+}) {
+  const [pageDimensions, setPageDimensions] = useState<{ width: number, height: number } | null>(null);
+  const activeTypoRef = useRef<HTMLDivElement>(null);
+
+  const onPageLoadSuccess = (page: any) => {
+    setPageDimensions({ width: page.originalWidth, height: page.originalHeight });
+  };
+
+  useEffect(() => {
+    if (activeTypo && activeTypoRef.current && activeTypo.pageNumber === pageNum) {
+      activeTypoRef.current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }
+  }, [activeTypo, pageNum]);
+
+  return (
+    <div className="relative">
+      <Page
+        pageNumber={pageNum}
+        width={width}
+        className="bg-white shadow-sm"
+        onLoadSuccess={onPageLoadSuccess}
+      />
+
+      {/* Invisible anchor for active typo scrolling */}
+      {pageDimensions && activeTypo && activeTypo.pageNumber === pageNum && activeTypo.boundingBox && (
+        (() => {
+          const scale = width / pageDimensions.width;
+          const { x, y, width: boxW, height: boxH } = activeTypo.boundingBox;
+          return (
+            <div
+              ref={activeTypoRef}
+              className="absolute pointer-events-none"
+              style={{
+                left: 0,
+                top: y * scale,
+                width: '100%',
+                height: boxH * scale,
+                // Invisible but takes up space for positioning
+                visibility: 'hidden'
+              }}
+            />
+          );
+        })()
+      )}
     </div>
   );
 }
@@ -184,14 +241,23 @@ export default function App() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFile = e.target.files[0];
-      setFile(selectedFile);
+      const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
+
       setSelectedPage(1);
       setTypos([]);
       setSelectedTypo(null);
       setErrorMessage(null);
 
-      console.log('📄 Uploading PDF:', selectedFile.name);
+      console.log('📄 Uploading file:', selectedFile.name);
       console.log('📊 File size:', (selectedFile.size / 1024).toFixed(2), 'KB');
+
+      // Only accept PDF files
+      if (fileExtension !== 'pdf') {
+        setErrorMessage('Only PDF files are supported. Please upload a PDF file.');
+        return;
+      }
+
+      setFile(selectedFile);
 
       // Analyze PDF for typos
       setIsAnalyzing(true);
@@ -212,7 +278,7 @@ export default function App() {
           setTypos(response.typos);
 
           if (response.typos.length === 0) {
-            setErrorMessage('No typos found! The PDF appears to be well-written.');
+            setErrorMessage('No typos found! The document appears to be well-written.');
             setTimeout(() => setErrorMessage(null), 5000);
           } else {
             setErrorMessage(`Found ${response.typos.length} potential typos! Check the right sidebar.`);
@@ -223,7 +289,7 @@ export default function App() {
           setErrorMessage('Analysis failed: ' + response.message);
         }
       } catch (error) {
-        console.error('❌ Error analyzing PDF:', error);
+        console.error('❌ Error analyzing file:', error);
         setErrorMessage('Failed to connect to backend. Make sure the backend server is running on port 8080.');
       } finally {
         setIsAnalyzing(false);
@@ -237,20 +303,20 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-sidebar">
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        className="hidden" 
-        accept=".pdf"
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept=".pdf,application/pdf"
       />
-      
+
       <Header onUpload={handleUploadClick} hasUploaded={!!file} errorMessage={errorMessage} />
 
       <main className="pt-[72px] h-screen flex relative overflow-hidden">
         <AnimatePresence>
           {!file ? (
-            <motion.div 
+            <motion.div
               key="empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -258,42 +324,44 @@ export default function App() {
               className="flex-1 bg-background"
             />
           ) : (
-            <motion.div 
+            <motion.div
               key="loaded"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex w-full h-full"
             >
               {/* Thumbnails */}
-              <ThumbnailSidebar 
-                file={file} 
-                numPages={numPages} 
-                selectedId={selectedPage} 
-                onSelect={setSelectedPage} 
+              <ThumbnailSidebar
+                file={file}
+                numPages={numPages}
+                selectedId={selectedPage}
+                onSelect={setSelectedPage}
               />
-              
+
               {/* Custom Scrollbar mimic - preserved from original but might need adjustment if real scrollbar is sufficient */}
               {/* <div className="fixed left-[210px] top-[108px] w-3 h-[392px] bg-[#dedede] rounded-full z-10" /> */}
 
               {/* Main Preview Area */}
-              <div className="flex-1 ml-[210px] mr-[480px] p-7 overflow-y-auto bg-[rgb(244,244,244)] min-h-full scrollbar-hide">
-                <div className="mx-auto w-full max-w-[1218px] flex flex-col items-start">
-                  <div className="bg-[rgba(244,244,244,0)] w-full max-w-[947px] min-h-[1000px] rounded-lg relative overflow-hidden mb-9 shadow-sm">
+              <div className="flex-1 ml-[210px] mr-[480px] p-7 overflow-y-auto overflow-x-hidden bg-[rgb(244,244,244)] min-h-full scrollbar-hide">
+                <div className="mx-auto w-full max-w-[1218px] flex flex-col items-center">
+                  <div className="w-full max-w-[947px] mb-9">
                     <Document file={file} onLoadSuccess={onDocumentLoadSuccess} className="flex flex-col items-center gap-4 py-8">
                       {Array.from(new Array(numPages), (_, index) => {
                         const pageNum = index + 1;
+                        const pageTypos = typos.filter(t => t.pageNumber === pageNum);
+                        const activeTypo = selectedTypo !== null ? typos[selectedTypo] : null;
+
                         return (
-                          <Page
-                            key={`page_${pageNum}`}
-                            pageNumber={pageNum}
+                          <PageWithTypoOverlay
+                            key={`page_wrapper_${pageNum}`}
+                            pageNum={pageNum}
                             width={947}
-                            className="bg-white shadow-sm"
+                            typos={pageTypos}
+                            activeTypo={activeTypo}
                           />
                         );
                       })}
                     </Document>
-                    {/* Overlay border */}
-                    <div className="absolute inset-0 border border-border rounded-lg pointer-events-none" />
                   </div>
                 </div>
               </div>

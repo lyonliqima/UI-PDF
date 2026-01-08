@@ -5,6 +5,12 @@ export interface TypoDetection {
   text: string;
   suggestion: string;
   errorType: string;
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 }
 
 export interface PdfAnalysisResponse {
