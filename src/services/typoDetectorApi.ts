@@ -1,4 +1,7 @@
-const API_BASE_URL = 'http://localhost:8080/api';
+// Use relative path for Vercel deployment, localhost for development
+const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? 'http://localhost:8080/api'
+  : '/api';
 
 export interface TypoDetection {
   pageNumber: number;
